@@ -5,11 +5,13 @@ import sys
 print ("Menu Opções: \n" )
 escolha = input('1- Consulta \n' \
 '2-Reserva')
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(host='localhost'))
-channel = connection.channel()
+if escolha == 1:
 
-channel.exchange_declare(exchange='direct_logs',
+ connection = pika.BlockingConnection(
+    pika.ConnectionParameters(host='localhost'))
+ channel = connection.channel()
+
+ channel.exchange_declare(exchange='direct_logs',
                          exchange_type='direct')
 
 message = ' '.join(sys.argv[1:]) or "info: Hello World!"
@@ -24,7 +26,7 @@ severities = sys.argv[1:]
 if not severities:
     sys.stderr.write("Usage: %s [info] [warning] [error]\n" % sys.argv[0])
     sys.exit(1)
-    
+
 for severity in severities:
     channel.queue_bind(exchange='direct_logs',
                        queue=queue_name,
