@@ -1,17 +1,27 @@
 #!/usr/bin/env python
 import pika
 import sys
+import csv
+import time
+import random
+# Marketing envia promocoes do(s) destino(s) selecionado(s) pelo cliente p/ receber notificação quando o preço varia
+# Ele envia SOMENTE para quem escolheu receber E SOMENTE p/ o(s) destino(s) escolhido(s) --> NAO PODE DAR FANOUT
 
-print ("Menu Opções: \n" )
-escolha = input('1- Consulta \n' \
-'2-Reserva')
-if escolha == 1:
+ARQUIVO_CSV = "itinerários.csv"
+def ler_precos_csv():
+    precos = {}
+    with open(ARQUIVO_CSV, newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            precos[row['Porto_Desemb']] = int(row['Valor_Pacote'])
+    return precos
 
- connection = pika.BlockingConnection(
+print ("Gostaria de receber promoções? \n Digite N caso queira sair\n" )
+connection = pika.BlockingConnection(
     pika.ConnectionParameters(host='localhost'))
- channel = connection.channel()
+channel = connection.channel()
 
- channel.exchange_declare(exchange='direct_logs',
+channel.exchange_declare(exchange='direct_logs',
                          exchange_type='direct')
 
 message = ' '.join(sys.argv[1:]) or "info: Hello World!"
