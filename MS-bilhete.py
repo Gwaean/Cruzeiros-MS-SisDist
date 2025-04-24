@@ -3,12 +3,12 @@ import random
 import json
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
+from chaves import carregar_chave_publica
 
 # Bilhete escuta de pagamento, caso seja aprovado ele envia o bilhete gerado SOMENTE p/ Reserva
 # Caso o pagamento seja NEGADO, nada acontece (o pagamento recusado envia notificacao direto p/ reserva)
-with open("chave_publica.pem", "rb") as f:
-    chave_publica = RSA.import_key(f.read())
+
+chave_publica = carregar_chave_publica
 
 def verificar_assinatura(mensagem, assinatura_hex):
     h = SHA256.new(mensagem.encode())
@@ -50,7 +50,6 @@ def escutar_pagamentos_aprovados():
     channel.queue_declare(queue="pagamento-aprovado")
 
     channel.basic_consume(queue="pagamento-aprovado", on_message_callback=callback, auto_ack=True)
-    print("[Bilhete] Aguardando pagamentos aprovados...")
     channel.start_consuming()
 
 if __name__ == "__main__":

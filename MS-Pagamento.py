@@ -1,15 +1,17 @@
+
 import pika
 import json
 import random
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
+from chaves import carregar_chave_privada
 
-chave_privada = RSA.import_key(open('private_key.der').read())
+chave_privada = carregar_chave_privada
 def assinar_mensagem(mensagem):
     h = SHA256.new(mensagem.encode())
     assinatura = pkcs1_15.new(chave_privada).sign(h)
     return assinatura.hex()
+
 def enviar(destino, mensagem, assinatura):
     connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
