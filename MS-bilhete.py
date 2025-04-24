@@ -1,25 +1,57 @@
 import pika
-import sys
+import random
+import json
+from Crypto.Signature import pkcs1_15
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
 
 # Bilhete escuta de pagamento, caso seja aprovado ele envia o bilhete gerado SOMENTE p/ Reserva
 # Caso o pagamento seja NEGADO, nada acontece (o pagamento recusado envia notificacao direto p/ reserva)
-connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
-channel = connection.channel()
+with open("chave_publica.pem", "rb") as f:
+    chave_publica = RSA.import_key(f.read())
 
-channel.exchange_declare(exchange="direct_logs", exchange_type="direct")
+def verificar_assinatura(mensagem, assinatura_hex):
+    h = SHA256.new(mensagem.encode())
+    assinatura = bytes.fromhex(assinatura_hex)
+    try:
+        pkcs1_15.new(chave_publica).verify(h, assinatura)
+        return True
+    except (ValueError, TypeError):
+        return False
+def gerar_bilhete(reserva_id):
+    return {
+        "reserva_id": reserva_id,
+        "bilhete": f"BILHETE-{reserva_id[:5].upper()}-{random.randint(1000,9999)}"
+    }
 
-message = " ".join(sys.argv[1:]) or "info: Hello World!"
-channel.basic_publish(exchange="logs", routing_key="severity", body=message)
-print(f" [x] Sent {message}")
-connection.close()
-result = channel.queue_declare(queue="", exclusive=True)
-queue_name = result.method.queue
+def enviar_bilhete(bilhete):
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    channel = connection.channel()
+    channel.queue_declare(queue="bilhete-gerado")
+
+    channel.basic_publish(exchange="", routing_key="bilhete-gerado", body=json.dumps(bilhete))
+    print(f"[Bilhete] Pagamento Processando...: {bilhete}")
+    connection.close()
+
+def callback(ch, method, props, body):
+    pacote = json.loads(body)
+    mensagem = pacote["mensagem"]
+    assinatura = pacote["assinatura"]
+
+    if verificar_assinatura(mensagem, assinatura):
+        dados = dict(item.split(":") for item in mensagem.split(";"))
+        bilhete = gerar_bilhete(dados["reserva_id"])
+        enviar_bilhete(bilhete)
 
 
-severities = sys.argv[1:]
-if not severities:
-    sys.stderr.write("Usage: %s [info] [warning] [error]\n" % sys.argv[0])
-    sys.exit(1)
+def escutar_pagamentos_aprovados():
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    channel = connection.channel()
+    channel.queue_declare(queue="pagamento-aprovado")
 
-for severity in severities:
-    channel.queue_bind(exchange="direct_logs", queue=queue_name, routing_key=severity)
+    channel.basic_consume(queue="pagamento-aprovado", on_message_callback=callback, auto_ack=True)
+    print("[Bilhete] Aguardando pagamentos aprovados...")
+    channel.start_consuming()
+
+if __name__ == "__main__":
+    escutar_pagamentos_aprovados()
