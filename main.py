@@ -1,15 +1,16 @@
 from datetime import datetime
 from MS_Reserva import ler_itinerarios, consultar_itinerarios, publicar_reserva, listar_itinerarios
+from MS_Marketing import subscribe_marketing
 
 def main():
-    itinerarios = ler_itinerarios('itinerarios.csv')
+    itinerarios = ler_itinerarios('itinerários.csv')
     
     while True:
         print("\nEscolha uma opção:")
         print("1. Listar Itinerários")
         print("2. Fazer Reserva")
         print("3. Sair")
-        
+        print("4. Inscrever-se na fila de marketing")
         escolha = input("\nDigite o número da opção: ")
 
         if escolha == '1':            
@@ -37,6 +38,14 @@ def main():
         elif escolha == '3':
             print("\nVolte sempre!\n")
             break
+        elif escolha == '4':
+            nome = input("Digite seu nome: ")
+            email = input("Digite seu e-mail: ")
+            interesse = input("Digite o porto de interesse para marketing: ")
+
+            
+            # Função para adicionar usuário à fila de marketing
+            subscribe_marketing(nome, email, interesse)
         else:
             print("\nOpção inválida. Tente novamente.")
 

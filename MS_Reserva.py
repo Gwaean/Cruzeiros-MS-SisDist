@@ -18,16 +18,16 @@ def verificar_assinatura(mensagem,assinatura):
    return False
 
 
-def ler_itinerarios(itinerarios_csv):
+def ler_itinerarios(itinerários_csv):
     itinerarios = []
     
-    with open(itinerarios_csv, mode='r', encoding='utf-8') as file:
-        reader = csv.DictReader(file, delimiter=';')  
+    with open(itinerários_csv, mode='r', encoding='utf-8') as file:
+        reader = csv.DictReader(file)  
         for row in reader:
             itinerarios.append({
                 'Destino': row['Destino'],
                 'Data_Embarque': datetime.strptime(row['Data_Embarque'], '%d/%m').date(),
-                'Porto Embarque': row['Porto_Embarque'],
+                'Porto_Embarque': row['Porto_Embarque'],
                 'Nome_Navio': row['Nome_Navio'],
                 'Porto_Desemb': row['Porto_Desemb'],
                 'Lugares_Visit': row['Lugares_Visit'],
@@ -54,13 +54,13 @@ def listar_itinerarios(itinerarios):
         for i, itinerario in enumerate(itinerarios, 1):
             print(f"\nItinerário {i}:")
             print(f"  Destino: {itinerario['Destino']}")
-            print(f"  Navio: {itinerario['Nome_Navio']}")
-            print(f"  Porto de Embarque: {itinerario['Porto_Embarque']}")
-            print(f"  Porto de Desembarque: {itinerario['Porto_Desemb']}")
-            print(f"  Data de Embarque: {itinerario['Data_Embarque']}")
-            print(f"  Número de Noites: {itinerario['Num_Noites']}")
-            print(f"  Lugares a Visitar: {itinerario['Lugares_Visit']}")
-            print(f"  Valor por Pessoa: R${itinerario['Valor_Pacote']:.2f}")
+            print(f" Nome_Navio: {itinerario['Nome_Navio']}")
+            print(f"  Porto_Embarque: {itinerario['Porto_Embarque']}")
+            print(f"  Porto_Desemb: {itinerario['Porto_Desemb']}")
+            print(f"  Data_Embarque: {itinerario['Data_Embarque']}")
+            print(f"  Num_Noites: {itinerario['Num_Noites']}")
+            print(f"  Lugares_Visit: {itinerario['Lugares_Visit']}")
+            print(f"  Valor_Pacote: R${itinerario['Valor_Pacote']:.2f}")
 
 
     
@@ -98,7 +98,7 @@ def callback_pagamento(ch, method, properties, body):
         elif "recusado" in mensagem:
             print(f"[Reserva] Ahhh...  Boa sorte na próxima, jovem gafanhoto \n Pagamento recusado ❌: {mensagem}")
     else:
-        print("[Reserva] ⚠️ Assinatura inválida!")
+        print("[Reserva] ERROR ⚠️ Assinatura inválida!")
         
 def callback_bilhete(_ch, _method, _props, body):
     bilhete = json.loads(body)
