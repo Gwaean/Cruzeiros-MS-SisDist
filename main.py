@@ -1,9 +1,34 @@
 from datetime import datetime
 from MS_Reserva import ler_itinerarios, consultar_itinerarios, publicar_reserva, listar_itinerarios
 from MS_Marketing import subscribe_marketing
+import pika
+
+
+def consumir_notificacoes(interesse):
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
+    channel = connection.channel()
+
+    channel.exchange_declare(exchange="promocoes", exchange_type="direct")
+    
+   
+    result = channel.queue_declare(queue='', exclusive=True)
+    queue_name = result.method.queue
+
+    print("\n🎯 Aguardando promoções... (CTRL+C para sair)\n")
+
+    destino_formatado = interesse.lower().replace(" ", "_")
+    channel.queue_bind(exchange="promocoes", queue=queue_name, routing_key=destino_formatado)
+
+
+    def callback(ch, method, properties, body):
+        print(f"\n📢 Notificação recebida: {body.decode()}")
+
+    channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
+
+    channel.start_consuming()
 
 def main():
-    itinerarios = ler_itinerarios('itinerários.csv')
+    itinerarios = ler_itinerarios("itinerarios.csv")
     
     while True:
         print("\nEscolha uma opção:")
@@ -40,12 +65,9 @@ def main():
             break
         elif escolha == '4':
             nome = input("Digite seu nome: ")
-            email = input("Digite seu e-mail: ")
             interesse = input("Digite o porto de interesse para marketing: ")
-
-            
-            # Função para adicionar usuário à fila de marketing
-            subscribe_marketing(nome, email, interesse)
+            subscribe_marketing(nome, interesse)
+            consumir_notificacoes(interesse)
         else:
             print("\nOpção inválida. Tente novamente.")
 

@@ -3,18 +3,17 @@ import random
 import json
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
-from chaves import carregar_chave_publica
+from MS_Pagamento import chave
 
 # Bilhete escuta de pagamento, caso seja aprovado ele envia o bilhete gerado SOMENTE p/ Reserva
 # Caso o pagamento seja NEGADO, nada acontece (o pagamento recusado envia notificacao direto p/ reserva)
-
-chave_publica = carregar_chave_publica
 
 def verificar_assinatura(mensagem, assinatura_hex):
     h = SHA256.new(mensagem.encode())
     assinatura = bytes.fromhex(assinatura_hex)
     try:
-        pkcs1_15.new(chave_publica).verify(h, assinatura)
+        pkcs1_15.new(chave.publickey()).verify(h, assinatura)
+        print("verificando assinatura")
         return True
     except (ValueError, TypeError):
         return False
@@ -48,6 +47,7 @@ def escutar_pagamentos_aprovados():
     connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
     channel.queue_declare(queue="pagamento-aprovado")
+    print("escutando pagamento...")
 
     channel.basic_consume(queue="pagamento-aprovado", on_message_callback=callback, auto_ack=True)
     channel.start_consuming()

@@ -26,7 +26,7 @@ def ler_itinerarios(itinerários_csv):
         for row in reader:
             itinerarios.append({
                 'Destino': row['Destino'],
-                'Data_Embarque': datetime.strptime(row['Data_Embarque'], '%d/%m').date(),
+                'Data_Embarque': datetime.strptime(row['Data_Embarque'], '%d/%m/%Y').date(),
                 'Porto_Embarque': row['Porto_Embarque'],
                 'Nome_Navio': row['Nome_Navio'],
                 'Porto_Desemb': row['Porto_Desemb'],
@@ -34,6 +34,7 @@ def ler_itinerarios(itinerários_csv):
                 'Num_Noites': int(row['Num_Noites']),
                 'Valor_Pacote': float(row['Valor_Pacote'])
             })
+
             
     return itinerarios
 
@@ -54,18 +55,18 @@ def listar_itinerarios(itinerarios):
         for i, itinerario in enumerate(itinerarios, 1):
             print(f"\nItinerário {i}:")
             print(f"  Destino: {itinerario['Destino']}")
-            print(f" Nome_Navio: {itinerario['Nome_Navio']}")
-            print(f"  Porto_Embarque: {itinerario['Porto_Embarque']}")
-            print(f"  Porto_Desemb: {itinerario['Porto_Desemb']}")
-            print(f"  Data_Embarque: {itinerario['Data_Embarque']}")
-            print(f"  Num_Noites: {itinerario['Num_Noites']}")
-            print(f"  Lugares_Visit: {itinerario['Lugares_Visit']}")
-            print(f"  Valor_Pacote: R${itinerario['Valor_Pacote']:.2f}")
+            print(f"  Nome do navio: {itinerario['Nome_Navio']}")
+            print(f"  Porto de embarque: {itinerario['Porto_Embarque']}")
+            print(f"  Porto de desemb: {itinerario['Porto_Desemb']}")
+            print(f"  Data de embarque: {itinerario['Data_Embarque'].strftime('%d/%m/%Y')}")
+            print(f"  Número de noites: {itinerario['Num_Noites']}")
+            print(f"  Lugares visitados {itinerario['Lugares_Visit']}")
+            print(f"  Valor do pacote: R${itinerario['Valor_Pacote']:.2f}")
 
 
     
 def publicar_reserva(itinerario, numero_passageiros, numero_cabines):
-    mensagem = "\nReserva criada com sucesso!"
+    mensagem = "criada com sucesso!"
     reserva_id = str(uuid.uuid4())
     valor_total = itinerario['Valor_Pacote'] * numero_passageiros
 
@@ -84,7 +85,7 @@ def publicar_reserva(itinerario, numero_passageiros, numero_cabines):
         body=json.dumps(dados_reserva)
     )
 
-    print(f"\nReserva publicada: {mensagem}")
+    print(f"\nSituação da reserva: {mensagem}")
     
     connection.close()
 def callback_pagamento(ch, method, properties, body):
@@ -94,16 +95,16 @@ def callback_pagamento(ch, method, properties, body):
 
     if verificar_assinatura(mensagem, assinatura):
         if "aprovado" in mensagem:
-            print(f"[Reserva] Uhuul! ✅ Seu pagamento foi aprovado: {mensagem}")
+            print(f"[\nReserva] Uhuul! ✅ Seu pagamento foi aprovado: {mensagem}")
         elif "recusado" in mensagem:
             print(f"[Reserva] Ahhh...  Boa sorte na próxima, jovem gafanhoto \n Pagamento recusado ❌: {mensagem}")
     else:
-        print("[Reserva] ERROR ⚠️ Assinatura inválida!")
+        print("[\nReserva] ERROR ⚠️ Assinatura inválida!")
         
 def callback_bilhete(_ch, _method, _props, body):
     bilhete = json.loads(body)
-    print(f"[Reserva] Tudo certo por aqui! Gerando reserva...: {bilhete}")    
-    print(f"  ID da Reserva: {bilhete.get('reserva_id')}")
+    print(f"\n[Reserva] Tudo certo por aqui! Gerando reserva...: {bilhete}")    
+    print(f"\nID da Reserva: {bilhete.get('reserva_id')}")
     print(bilhete)
 
 def escutar_respostas():
@@ -117,7 +118,7 @@ def escutar_respostas():
     channel.basic_consume(queue='pagamento-aprovado', on_message_callback=callback_pagamento, auto_ack=True)
     channel.basic_consume(queue='pagamento-recusado', on_message_callback=callback_pagamento, auto_ack=True)
     channel.basic_consume(queue='bilhete-gerado', on_message_callback=callback_bilhete, auto_ack=True)
-    
+    print("aguardando reservas...")
     channel.start_consuming()
     
 if __name__ == "__main__":

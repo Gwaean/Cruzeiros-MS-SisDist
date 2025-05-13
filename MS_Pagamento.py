@@ -1,17 +1,24 @@
-
 import pika
 import json
 import random
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
-from chaves import carregar_chave_privada
+from Crypto.PublicKey import RSA
 
-chave_privada = carregar_chave_privada
+
+chave = RSA.generate(2048)
+
+with open("private_key.pem", "wb") as f:
+    f.write(chave.export_key())
+
+with open("public_key.der", "wb") as f:
+    f.write(chave.publickey().export_key(format="DER"))
+    
 def assinar_mensagem(mensagem):
     h = SHA256.new(mensagem.encode())
-    assinatura = pkcs1_15.new(chave_privada).sign(h)
+    assinatura = pkcs1_15.new(chave).sign(h)
     return assinatura.hex()
-
+    
 def enviar(destino, mensagem, assinatura):
     connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
@@ -22,8 +29,8 @@ def enviar(destino, mensagem, assinatura):
         "assinatura": assinatura
     }
 
-    channel.basic_publish(exchange="", routing_key=destino, body=json.dumps(pacote))
-    print(f"[Pagamento] Enviado para {destino}: {mensagem}")
+    channel.basic_publish(exchange="direct_logs", routing_key=destino, body=json.dumps(pacote))
+    print(f"[Pagamento] Situação: {destino} {mensagem}")
     connection.close()
 
 def simular_pagamento():
@@ -37,17 +44,17 @@ def processar(ch, method, props, body):
     reserva_id = dados.get("reserva_id", "desconhecida")
     valor = dados.get("valor", 0)
 
-    print(f"Processando pagamento da Reserva {reserva_id} no valor de R${valor}")
+    print(f"/**Processando pagamento da reserva ID = {reserva_id} no valor de R${valor}")
     aprovado = simular_pagamento()
 
     status = "aprovado" if aprovado else "recusado"
-    mensagem = f"reserva_id:{reserva_id};status:{status}"
+    mensagem = f"Reserva ID = {reserva_id}; Status: {status}"
     assinatura = assinar_mensagem(mensagem)
 
     if aprovado:
-        enviar("pagamento-aprovado", mensagem, assinatura)
+        enviar("pagamento-aprovado;", mensagem, assinatura)
     else:
-        enviar("pagamento-recusado", mensagem, assinatura)
+        enviar("pagamento-recusado;", mensagem, assinatura)
 
 def escutar():
     connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))

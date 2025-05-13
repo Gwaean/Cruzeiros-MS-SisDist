@@ -3,7 +3,7 @@ import csv
 import time
 import random
 
-ARQUIVO_CSV = 'itinerários.csv'
+ARQUIVO_CSV = 'itinerarios.csv'
 ARQUIVO_HISTORICO = 'historico_precos.csv'
 ARQUIVO_MARKETING = 'marketing_queue.csv'
 
@@ -36,28 +36,17 @@ def salvar_precos_csv(precos):
                 variacao
             ])
 
-def subscribe_marketing(nome, email, destino):
+def subscribe_marketing(nome, destino):
     with open(ARQUIVO_MARKETING, 'a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         # Verifica se o arquivo está vazio para escrever o cabeçalho
         if f.tell() == 0:
-            writer.writerow(['Nome', 'Email', 'Destino'])
-        writer.writerow([nome, email, destino])
+            writer.writerow(['Nome', 'Destino'])
+        writer.writerow([nome,  destino])
     print(f"Inscrição realizada para {nome} em {destino}.")
 
-def verificar_inscricoes(destino):
-    inscritos = []
-    try:
-        with open(ARQUIVO_MARKETING, 'r', newline='', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            header = next(reader, None)  
-            for row in reader:
-                if len(row) >= 3 and row[2] == destino:
-                    inscritos.append(row[1])  # Email
-    except FileNotFoundError:
-        print(f"Arquivo {ARQUIVO_MARKETING} não encontrado.")
-    return inscritos
 
+'''
 def enviar_notificacao(destino, preco_antigo, preco_novo):
     connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
     channel = connection.channel()
@@ -77,6 +66,27 @@ def enviar_notificacao(destino, preco_antigo, preco_novo):
         channel.basic_publish(exchange="promocoes", routing_key=email, body=mensagem)
         print(f" [x] Enviado para {email}: {mensagem}")
 
+    connection.close()
+'''
+
+def enviar_notificacao(destino, preco_antigo, preco_novo):
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
+    channel = connection.channel()
+    channel.exchange_declare(exchange="promocoes", exchange_type="direct")
+
+    if preco_novo < preco_antigo:
+        variacao = preco_antigo - preco_novo
+        mensagem = f"🔥 Baixa de preço para {destino}! APROVEITE! Agora está R${preco_novo} (↓ R${variacao})"
+    else:
+        variacao = preco_novo - preco_antigo
+        mensagem = f"📈 Aumento de preço em {destino}: Agora foi R${preco_novo} (↑ R${variacao})"
+    
+    print(mensagem)
+    
+    routing_key = destino.lower().replace(" ", "_")  # Ex: "Porto Alegre" -> "porto_alegre"
+    channel.basic_publish(exchange="promocoes", routing_key=routing_key, body=mensagem)
+
+    print(f" [x] Notificação enviada na fila promocoes-{routing_key}")
     connection.close()
 
 def simular_mudanca_preco():
